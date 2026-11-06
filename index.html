@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Alerte Péremption</title>
+  <meta name="theme-color" content="#0f766e">
+  <meta name="description" content="Suivre les dates de péremption du stock, 100% local.">
+
+  <!-- iPhone : installation sur l'écran d'accueil -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Péremption">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1 id="titre">Alerte Péremption</h1>
+  </header>
+
+  <main>
+    <!-- ========== ÉCRAN 1 : LISTE ========== -->
+    <section id="ecran-liste" class="ecran actif">
+      <button id="banniere" class="banniere" hidden></button>
+
+      <div class="compteurs">
+        <button class="compteur rouge" data-filtre="rouge">
+          <span class="nb" id="nb-rouge">0</span><span class="lbl">Urgent</span>
+        </button>
+        <button class="compteur orange" data-filtre="orange">
+          <span class="nb" id="nb-orange">0</span><span class="lbl">Bientôt</span>
+        </button>
+        <button class="compteur vert" data-filtre="vert">
+          <span class="nb" id="nb-vert">0</span><span class="lbl">OK</span>
+        </button>
+      </div>
+
+      <div class="barre-recherche">
+        <input id="recherche" class="recherche" type="search" placeholder="Chercher un produit ou un code…" autocomplete="off">
+        <button id="btn-scan-recherche" class="btn-icone" aria-label="Scanner pour chercher">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+        </button>
+      </div>
+
+      <div class="filtres" role="tablist">
+        <button class="filtre actif" data-filtre="tous">Tous</button>
+        <button class="filtre filtre-perime" data-filtre="perime">⛔ Périmés <span class="nb-chip" id="nb-perime">0</span></button>
+        <button class="filtre" data-filtre="rouge"><i class="pt rouge"></i>Rouge</button>
+        <button class="filtre" data-filtre="orange"><i class="pt orange"></i>Orange</button>
+        <button class="filtre" data-filtre="vert"><i class="pt vert"></i>Vert</button>
+      </div>
+
+      <ul id="liste" class="liste"></ul>
+      <div id="vide" class="vide" hidden>
+        <p class="vide-titre">Aucun article</p>
+        <p>Appuie sur <b>+ Ajouter</b> pour enregistrer un produit.</p>
+      </div>
+    </section>
+
+    <!-- ========== ÉCRAN 2 / 3 : AJOUTER / MODIFIER ========== -->
+    <section id="ecran-form" class="ecran">
+      <form id="form" class="carte" autocomplete="off" novalidate>
+        <input type="hidden" id="f-id">
+
+        <button type="button" id="btn-scan" class="btn btn-scan gros">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+          Scanner le code-barres
+        </button>
+
+        <label class="champ">
+          <span>Code-barres (optionnel)</span>
+          <input id="f-code" type="text" inputmode="numeric" placeholder="ex : 6130234000123">
+        </label>
+
+        <label class="champ">
+          <span>Nom du produit *</span>
+          <input id="f-nom" type="text" required placeholder="ex : Ramy fraise 1L" list="noms-connus">
+          <datalist id="noms-connus"></datalist>
+        </label>
+
+        <!-- Lots déjà enregistrés pour ce produit (mode AJOUTER) -->
+        <div id="deja" class="deja" hidden></div>
+
+        <label class="champ">
+          <span>Date de péremption *</span>
+          <input id="f-date" type="date" required>
+        </label>
+
+        <div class="ligne-2">
+          <label class="champ">
+            <span>Quantité</span>
+            <input id="f-qte" type="number" inputmode="numeric" min="0" step="1" value="1">
+          </label>
+          <label class="champ">
+            <span>Emplacement</span>
+            <input id="f-empl" type="text" placeholder="ex : Dépôt haut" list="empl-connus">
+            <datalist id="empl-connus"></datalist>
+          </label>
+        </div>
+
+        <p id="f-erreur" class="erreur" hidden></p>
+
+        <!-- Visible seulement en mode MODIFIER -->
+        <div id="zone-detail" hidden>
+          <div class="info-etat" id="f-etat"></div>
+          <div class="ligne-2 egal">
+            <button type="button" id="btn-moins" class="btn btn-gris gros">−1</button>
+            <button type="button" id="btn-moins-pack" class="btn btn-gris gros">−6 (pack)</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-principal gros">Enregistrer</button>
+        <button type="button" id="btn-suppr" class="btn btn-danger" hidden>Supprimer (vendu / retiré)</button>
+        <button type="button" id="btn-annuler" class="btn btn-lien">Annuler</button>
+      </form>
+    </section>
+
+    <!-- ========== RÉGLAGES ========== -->
+    <section id="ecran-reglages" class="ecran">
+      <div class="carte">
+        <h2>Couleurs</h2>
+        <label class="champ">
+          <span>Rouge si reste … jours ou moins</span>
+          <input id="r-rouge" type="number" inputmode="numeric" min="0" step="1">
+        </label>
+        <label class="champ">
+          <span>Orange si reste … jours ou moins</span>
+          <input id="r-orange" type="number" inputmode="numeric" min="1" step="1">
+        </label>
+        <label class="champ">
+          <span>Taille du pack (bouton « −pack »)</span>
+          <input id="r-pack" type="number" inputmode="numeric" min="2" step="1">
+        </label>
+        <p id="r-erreur" class="erreur" hidden></p>
+        <button id="btn-reglages" class="btn btn-principal">Enregistrer les réglages</button>
+      </div>
+
+      <div class="carte">
+        <h2>Sauvegarde</h2>
+        <p class="aide">Fais un <b>Export</b> chaque semaine. Garde le fichier dans <b>Fichiers</b> ou envoie-le sur WhatsApp. Si tu changes de téléphone, fais <b>Importer</b>.</p>
+        <p class="aide" id="derniere-sauv"></p>
+        <button id="btn-export" class="btn btn-principal">Exporter les données</button>
+        <label class="btn btn-gris">
+          Importer un fichier
+          <input id="f-import" type="file" accept=".json,application/json" hidden>
+        </label>
+      </div>
+
+      <div class="carte">
+        <h2>Infos</h2>
+        <p class="aide" id="info-stockage">Données enregistrées dans ce téléphone uniquement.</p>
+        <p class="aide">Version 1.1 — fonctionne sans internet.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barre du bas -->
+  <nav class="barre-bas">
+    <button class="onglet actif" data-ecran="liste">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
+      <span>Liste</span>
+    </button>
+    <button class="onglet ajouter" data-ecran="ajouter">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      <span>Ajouter</span>
+    </button>
+    <button class="onglet" data-ecran="reglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+      <span>Réglages</span>
+    </button>
+  </nav>
+
+  <!-- ========== FENÊTRE SCANNER ========== -->
+  <div id="scanner" class="fenetre" hidden>
+    <div class="fenetre-boite">
+      <h2>Scanner</h2>
+      <p class="aide">Mets le code-barres dans le cadre.</p>
+      <div id="lecteur" class="lecteur"></div>
+      <p id="scan-msg" class="erreur" hidden></p>
+      <div class="manuel">
+        <input id="scan-manuel" type="text" inputmode="numeric" placeholder="ou tape le code ici">
+        <button id="scan-ok" class="btn btn-principal">OK</button>
+      </div>
+      <button id="scan-fermer" class="btn btn-gris">Fermer</button>
+    </div>
+  </div>
+
+  <!-- ========== FENÊTRE CHOIX DU PRODUIT (même code-barres) ========== -->
+  <div id="choix" class="fenetre" hidden>
+    <div class="fenetre-boite">
+      <h2>Quel produit ?</h2>
+      <p class="aide">Ce code-barres est utilisé par plusieurs produits.</p>
+      <div id="choix-liste" class="choix-liste"></div>
+      <button id="choix-nouveau" class="btn btn-gris">Autre produit (nouveau nom)</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
